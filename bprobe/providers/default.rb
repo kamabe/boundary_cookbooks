@@ -26,21 +26,18 @@ action :create do
   else
     create_meter_request(new_resource)
     save_meter_id_attribute(new_resource)
+    new_resource.updated_by_last_action(true)
   end
 
-  apply_cloud_tags(new_resource)
   apply_meter_tags(new_resource)
-
-  new_resource.updated_by_last_action(true)
 end
 
 action :delete do
   if meter_exists?(new_resource)
     delete_meter_request(new_resource)
     delete_meter_id_attribute
+    new_resource.updated_by_last_action(true)
   else
     Chef::Log.debug("Boundary meter doesn't exist, not deleting.")
   end
-
-  new_resource.updated_by_last_action(true)
 end
