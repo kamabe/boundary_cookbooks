@@ -18,13 +18,19 @@
 # limitations under the License.
 #
 
+if node[:boundary][:bprobe][:use_node_name] == true
+  meter_name = node.name
+else
+  meter_name = node[:fqdn]
+end
+
 # delete the cert and key files on disk
-bprobe_certificates node[:fqdn] do
+bprobe_certificates meter_name do
   action :delete
 end
 
 # delete the meter from the boundary api
-bprobe node[:fqdn] do
+bprobe meter_name do
   action :delete
 end
 
