@@ -39,54 +39,95 @@ module Boundary
         Chef::Log.error("Could not create meter [#{new_resource.name}], failed with #{e}")
       end
     end
-
-    def apply_cloud_tags(new_resource)
+    
+    def find_cloud_tags
+      tags = []
       if node[:ec2]
-        Chef::Log.debug("This meter seems to be on EC2, applying ec2 based tags")
-
+        
         if node[:ec2][:security_groups].length > 0
           node[:ec2][:security_groups].each do |group|
-            apply_an_tag(new_resource, group)
+            tags << group
           end
         end
 
         if node[:ec2][:placement_availability_zone]
-          apply_an_tag(new_resource, node[:ec2][:placement_availability_zone])
+          tags << node[:ec2][:placement_availability_zone]
         end
 
         if node[:ec2][:instance_type]
-          apply_an_tag(new_resource, node[:ec2][:instance_type])
+          tags << node[:ec2][:instance_type]
         end
       end
+      tags
     end
 
     def apply_meter_tags(new_resource)
       Chef::Log.debug("This meter currently has these attribute based tags [#{node[:boundary][:bprobe][:tags]}]")
 
-      tags = node[:boundary][:bprobe][:tags]
+      tags       = node[:boundary][:bprobe][:tags]
+      meter_tags = find_meter_tags(new_resource)
+      cloud_tags = find_cloud_tags
+      new_tags   = cloud_tags + tags - meter_tags
+      old_tags   = meter_tags - tags - cloud_tags
 
-      if tags.length > 0
-        tags.each do |tag|
-          apply_an_tag(new_resource, tag)
+      if new_tags.length > 0
+        new_tags.each do |tag|
+          apply_an_tag(new_resource, tag, :put)
         end
+        new_resource.updated_by_last_action(true)
       else
         Chef::Log.debug("No meter tags to apply.")
       end
+      
+      if old_tags.length > 0
+        old_tags.each do |tag|
+          apply_an_tag(new_resource, tag, :delete)
+        end
+        new_resource.updated_by_last_action(true)
+      else
+        Chef::Log.debug("No meter tags to remove.")
+      end
+    end
+    
+    def find_meter_tags(new_resource)
+      begin
+        url = build_url(new_resource, :meter)
+        headers = generate_headers()
+
+        response = http_request(:get, "#{url}", headers, "")
+        
+        if response
+          body = JSON.parse(response.body)
+          if body
+            if body["tags"]
+              body["tags"]
+            else
+              Chef::Application.fatal!("Could not get meter tags (nil body tags response)!")
+            end
+          else
+            Chef::Application.fatal!("Could not get meter tags (nil body response)!")
+          end
+        else
+          Chef::Application.fatal!("Could not get meter tags (nil response)!")
+        end
+      rescue Exception => e
+        Chef::Log.error("Could not find meter tags, failed with #{e}")
+      end
     end
 
-    def apply_an_tag(new_resource, tag)
+    def apply_an_tag(new_resource, tag, action)
       begin
         url = build_url(new_resource, :tags)
         headers = generate_headers()
 
-        Chef::Log.info("Applying meter tag [#{tag}]")
+        Chef::Log.info("Applying #{action.to_s} for meter tag [#{tag}]")
 
-        http_request(:put, "#{url}/#{tag}", headers, "")
+        http_request(action, "#{url}/#{tag}", headers, "")
       rescue Exception => e
         Chef::Log.error("Could not apply meter tag, failed with #{e}")
       end
     end
-
+    
     def delete_meter_request(new_resource)
       begin
         url = build_url(new_resource, :delete)
