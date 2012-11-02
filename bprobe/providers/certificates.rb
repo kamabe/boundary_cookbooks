@@ -27,8 +27,6 @@ action :install do
 
   download_certificate_request(new_resource)
   download_key_request(new_resource)
-
-  new_resource.updated_by_last_action(true)
 end
 
 action :delete do
@@ -41,9 +39,8 @@ action :delete do
     file file do
       action :delete
     end
+    new_resource.updated_by_last_action(true)
   end
-
-  new_resource.updated_by_last_action(true)
 end
 
 private
@@ -73,6 +70,7 @@ def download_certificate_request(new_resource)
     rescue Exception => e
       Chef::Log.error("Could not download certificate, failed with #{e}")
     end
+    new_resource.updated_by_last_action(true)
   end
 end
 
@@ -101,5 +99,6 @@ def download_key_request(new_resource)
     rescue Exception => e
       Chef::Log.error("Could not download key, failed with #{e}")
     end
+    new_resource.updated_by_last_action(true)
   end
 end
