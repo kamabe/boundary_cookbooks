@@ -22,6 +22,7 @@ require 'json'
 require 'uri'
 require 'net/https'
 require 'base64'
+require 'timeout'
 
 module Boundary
   module API
@@ -294,8 +295,20 @@ module Boundary
       headers.each{|k,v|
         req[k] = v
       }
-      response = http.request(req)
 
+      retries = 3
+      Timeout::timeout(10) do
+        response = http.request(req)
+      rescue Timeout::Error => e
+        if retries > 0
+          retries -= 1
+          Chef::Log.error("Request timed out, retrying...")
+          retry
+        else
+          Chef::Application.fatal!("Request timed out, failed with #{e}")
+        end
+      end
+      
       Chef::Log.debug("Response Body: #{response.body}")
       Chef::Log.debug("Status: #{response.code}")
 
