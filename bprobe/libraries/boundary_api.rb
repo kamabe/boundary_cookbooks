@@ -29,9 +29,9 @@ module Boundary
 
     def create_meter_request(new_resource)
       begin
-        url = build_url(new_resource, :create)
+        url     = build_url(new_resource, :create)
         headers = generate_headers()
-        body = {:name => new_resource.name}.to_json
+        body    = {:name => new_resource.name}.to_json
 
         Chef::Log.info("Creating meter [#{new_resource.name}]")
         response = http_request(:post, url, headers, body)
@@ -63,7 +63,7 @@ module Boundary
     end
 
     def apply_meter_tags(new_resource)
-      Chef::Log.debug("This meter currently has these attribute based tags [#{node[:boundary][:bprobe][:tags]}]")
+      Chef::Log.info("This meter currently has these attribute based tags [#{node[:boundary][:bprobe][:tags]}]")
 
       tags       = node[:boundary][:bprobe][:tags]
       meter_tags = find_meter_tags(new_resource)
@@ -77,7 +77,7 @@ module Boundary
         end
         new_resource.updated_by_last_action(true)
       else
-        Chef::Log.debug("No meter tags to apply.")
+        Chef::Log.info("No meter tags to apply.")
       end
       
       if old_tags.length > 0
@@ -86,16 +86,15 @@ module Boundary
         end
         new_resource.updated_by_last_action(true)
       else
-        Chef::Log.debug("No meter tags to remove.")
+        Chef::Log.info("No meter tags to remove.")
       end
     end
     
     def find_meter_tags(new_resource)
       begin
-        url = build_url(new_resource, :meter)
-        headers = generate_headers()
-
-        response = http_request(:get, "#{url}", headers, "")
+        url      = build_url(new_resource, :meter)
+        headers  = generate_headers()
+        response = http_request(:get, url, headers, "")
         
         if response
           body = JSON.parse(response.body)
@@ -118,7 +117,7 @@ module Boundary
 
     def apply_an_tag(new_resource, tag, action)
       begin
-        url = build_url(new_resource, :tags)
+        url     = build_url(new_resource, :tags)
         headers = generate_headers()
 
         Chef::Log.info("Applying #{action.to_s} for meter tag [#{tag}]")
@@ -131,7 +130,7 @@ module Boundary
     
     def delete_meter_request(new_resource)
       begin
-        url = build_url(new_resource, :delete)
+        url     = build_url(new_resource, :delete)
         headers = generate_headers()
 
         Chef::Log.info("Deleting meter [#{new_resource.name}]")
@@ -215,7 +214,7 @@ module Boundary
 
     def meter_exists?(new_resource)
       begin
-        url = build_url(new_resource, :search)
+        url     = build_url(new_resource, :search)
         headers = generate_headers()
 
         response = http_request(:get, url, headers)
@@ -238,9 +237,8 @@ module Boundary
 
     def get_meter_id(new_resource)
       begin
-        url = build_url(new_resource, :search)
-        headers = generate_headers()
-
+        url      = build_url(new_resource, :search)
+        headers  = generate_headers()
         response = http_request(:get, url, headers)
 
         if response
@@ -269,12 +267,13 @@ module Boundary
       Chef::Log.debug("Headers: #{headers.to_hash.inspect}")
       Chef::Log.debug("Request Body: #{body}")
 
-      uri = URI(url)
+      uri  = URI(url)
       http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = true
+      
+      http.use_ssl      = true
       #http.ssl_version = "SSLv3"
-      http.ca_file = "#{Chef::Config[:file_cache_path]}/cacert.pem"
-      http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+      http.ca_file      = "#{Chef::Config[:file_cache_path]}/cacert.pem"
+      http.verify_mode  = OpenSSL::SSL::VERIFY_PEER
 
       case method
       when :get
@@ -292,22 +291,11 @@ module Boundary
         nil
       end
 
-      headers.each{|k,v|
+      headers.each do |k,v|
         req[k] = v
-      }
-
-      retries = 3
-      Timeout::timeout(10) do
-        response = http.request(req)
-      rescue Timeout::Error => e
-        if retries > 0
-          retries -= 1
-          Chef::Log.error("Request timed out, retrying...")
-          retry
-        else
-          Chef::Application.fatal!("Request timed out, failed with #{e}")
-        end
       end
+
+      response = http.request(req)
       
       Chef::Log.debug("Response Body: #{response.body}")
       Chef::Log.debug("Status: #{response.code}")

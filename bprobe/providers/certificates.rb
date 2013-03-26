@@ -47,12 +47,12 @@ private
 
 def download_certificate_request(new_resource)
   if ::File.exist?("#{node[:boundary][:bprobe][:etc][:path]}/cert.pem")
-    Chef::Log.debug("Certificate file already exists, not downloading.")
+    Chef::Log.info("Certificate file already exists, not downloading.")
   else
     begin
-      auth = auth_encode()
+      auth     = auth_encode()
       base_url = build_url(new_resource, :certificates)
-      headers = {"Authorization" => "Basic #{auth}"}
+      headers  = {"Authorization" => "Basic #{auth}"}
 
       cert_response = http_request(:get, "#{base_url}/cert.pem", headers)
 
@@ -76,12 +76,12 @@ end
 
 def download_key_request(new_resource)
   if ::File.exist?("#{node[:boundary][:bprobe][:etc][:path]}/key.pem")
-    Chef::Log.debug("Key file already exists, not downloading.")
+    Chef::Log.info("Key file already exists, not downloading.")
   else
     begin
-      auth = auth_encode()
+      auth     = auth_encode()
       base_url = build_url(new_resource, :certificates)
-      headers = {"Authorization" => "Basic #{auth}"}
+      headers  = {"Authorization" => "Basic #{auth}"}
 
       key_response = http_request(:get, "#{base_url}/key.pem", headers)
 

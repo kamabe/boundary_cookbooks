@@ -47,7 +47,6 @@ bprobe_certificates meter_name do
 end
 
 # install the bprobe package
-
 package "bprobe"
 
 # start the bprobe service

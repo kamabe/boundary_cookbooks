@@ -21,8 +21,8 @@
 include Boundary::API
 
 action :create do
-  if node[:boundary][:bprobe][:id]
-    Chef::Log.debug("Boundary meter already exists, not creating.")
+  if meter_exists?(new_resource) #node[:boundary][:bprobe].key?(:id)
+    Chef::Log.info("Boundary meter already exists, not creating.")
   else
     create_meter_request(new_resource)
     save_meter_id_attribute(new_resource)
@@ -38,6 +38,6 @@ action :delete do
     delete_meter_id_attribute
     new_resource.updated_by_last_action(true)
   else
-    Chef::Log.debug("Boundary meter doesn't exist, not deleting.")
+    Chef::Log.info("Boundary meter doesn't exist, not deleting.")
   end
 end
